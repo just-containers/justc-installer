@@ -1,0 +1,7 @@
+/config.mak
+*.o
+*.a.xyzzy
+/src/include/justc-installer/config.h
+/tools/downloads
+/tools/cross
+/dist

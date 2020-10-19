@@ -1,0 +1,5 @@
+main.o
+scan.o
+tar.o
+zero.o
+-lskarnet
