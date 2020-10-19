@@ -86,6 +86,7 @@ for target in "${targets[@]}" ; do
   ./configure \
     --target=$target \
     --prefix=/usr \
+    --libdir=/usr/lib \
     --with-include=$(pwd)/tools/cross/${target}/include \
     --with-lib=$(pwd)/tools/cross/${target}/lib \
     --with-sysdeps=$(pwd)/tools/cross/${target}/lib/skalibs/sysdeps
