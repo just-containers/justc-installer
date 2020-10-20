@@ -4,6 +4,7 @@
 #include <skalibs/allreadwrite.h>
 #include <skalibs/djbunix.h>
 #include <unistd.h>
+#include <utime.h>
 
 #include "payload.h"
 #include "tar.h"
@@ -46,6 +47,9 @@ static void build_filename(justc_tar *header, int flush) {
 
 static int extract_file(justc_tar *header, const unsigned char *s) {
     int fd;
+    struct utimbuf utim;
+    struct stat st;
+
     build_filename(header,1);
     fd = open_create(cur.s);
     if(fd == -1) {
@@ -63,7 +67,16 @@ static int extract_file(justc_tar *header, const unsigned char *s) {
     if(fd_chmod(fd,header->mode) == -1) {
         strerr_warn3sys("unable to chmod ",cur.s,": ");
     }
+    if(fstat(fd,&st) == -1) {
+        strerr_warn3sys("unable to fstat ",cur.s,": ");
+    }
     fd_close(fd);
+
+    utim.actime = st.st_atime;
+    utim.modtime = header->mtime;
+    if(utime(cur.s, &utim) < 0) {
+        strerr_warn3sys("unable to utime ",cur.s,": ");
+    }
 
     return 0;
 }
@@ -71,7 +84,9 @@ static int extract_file(justc_tar *header, const unsigned char *s) {
 static int extract_symlink(justc_tar *header, const unsigned char *s) {
     stralloc t = STRALLOC_ZERO;
     struct stat st;
+    struct utimbuf utim;
     (void)s;
+
     build_filename(header,0);
     if(longlink) {
         longlink = 0;
@@ -108,11 +123,22 @@ static int extract_symlink(justc_tar *header, const unsigned char *s) {
         strerr_warn3sys("unable to lchown ",cur.s,": ");
     }
 
+    if(lstat(cur.s,&st) != -1) {
+        strerr_warn3sys("unable to lstat ",cur.s,": ");
+    }
+
+    utim.actime = st.st_atime;
+    utim.modtime = header->mtime;
+    if(utime(cur.s, &utim) < 0) {
+        strerr_warn3sys("unable to utime ",cur.s,": ");
+    }
+
     return 0;
 }
 
 static int extract_dir(justc_tar *header, const unsigned char *s) {
     struct stat st;
+    struct utimbuf utim;
     (void)s;
     build_filename(header,1);
     if(lstat(cur.s,&st) == -1) {
@@ -122,6 +148,14 @@ static int extract_dir(justc_tar *header, const unsigned char *s) {
         }
         if(lchown(cur.s,header->uid,header->gid) == -1) {
             strerr_warn3sys("unable to chown ",cur.s,": ");
+        }
+        if(stat(cur.s,&st) != -1) {
+            strerr_warn3sys("unable to stat ",cur.s,": ");
+        }
+        utim.actime = st.st_atime;
+        utim.modtime = header->mtime;
+        if(utime(cur.s, &utim) < 0) {
+            strerr_warn3sys("unable to utime ",cur.s,": ");
         }
     }
 
@@ -157,7 +191,7 @@ int main(int argc, const char * argv[]) {
     }
 
     stralloc_copys(&root,argv[1]);
-    while(root.s[root.len-1] == '/') {
+    while(root.len && root.s[root.len-1] == '/') {
         root.len--;
     }
     stralloc_append(&root,'/');
