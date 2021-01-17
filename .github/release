@@ -4,6 +4,9 @@ set -e
 # don't loop if files don't exist
 shopt -s nullglob
 
+mkdir -p tools/downloads
+mkdir -p tools/cross/bin
+
 if [[ ! -d dist ]] ; then
     printf "This needs to be run from the root of the repo\n"
     exit 1
@@ -13,6 +16,16 @@ fi
 if [ -z "${TRAVIS_TAG}" ]; then
   exit 0
 fi
+
+if [[ ! -f "tools/downloads/linux-amd64-github-release.bz2" ]] ; then
+  printf "Downloading tools/downloads/linux-amd64-github-release.bz2\n"
+  curl -s -R -L -o "tools/downloads/linux-amd64-github-release.bz2" \
+    "https://github.com/github-release/github-release/releases/download/v0.8.1/linux-amd64-github-release.bz2"
+fi
+
+bunzip2 "tools/downloads/linux-amd64-github-release.bz2"
+mv "tools/downloads/linux-amd64-github-release" "tools/cross/bin/github-release"
+chmod +x "tools/cross/bin/github-release"
 
 export "PATH=$(pwd)/tools/cross/bin:$PATH"
 
